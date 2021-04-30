@@ -4,13 +4,25 @@
   "description": "PostIT backend",
   "main": "index.js",
   "scripts": {
+    "start": "nodemon ./src/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "type": "module",
   "author": "Giampà Antonio, Sammarco Salvatore",
   "license": "ISC",
   "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^8.2.0",
     "express": "^4.17.1",
+    "express-unless": "^0.5.0",
+    "jsonwebtoken": "^8.5.1",
     "mongoose": "^5.12.5"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.10",
+    "@types/express": "^4.17.11",
+    "@types/express-jwt": "^6.0.1",
+    "@types/jsonwebtoken": "^8.5.1",
+    "nodemon": "^2.0.7"
   }
 }
