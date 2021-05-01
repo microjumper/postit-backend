@@ -1,9 +1,14 @@
 import express from 'express';
 import cors from 'cors';
-import mongoose from 'mongoose';
-import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv'
+import bcrypt from 'bcrypt';
+
+import { generateAccessToken, authenticateToken } from './jwt-utils.mjs';
+import { User, Post } from './mongoose-chemas.mjs';
+
 dotenv.config();
+
+const saltRounds = 10;
 
 const app = express();
 app.use(cors(), express.json());
@@ -13,31 +18,34 @@ app.listen(port, () => {
     console.log(`PostIT backend is listening at http://localhost:${port}`)
 });
 
-mongoose.connect("mongodb://localhost:27017/postitdb", { useNewUrlParser: true, useUnifiedTopology: true });
-const postSchema = {
-    title: String,
-    content: String
-};
-const Post = mongoose.model("Post", postSchema);
-
-const userSchema = {
-    user: String,
-    password: String
-};
-const User = mongoose.model("User", userSchema);
-
 app.get('/', (req, res) => {
     res.send('Benvenuto su PostIT!')
 });
 
+app.route('/register')
+    .post((req, res) => {
+        bcrypt.hash(req.body.password, saltRounds, (err, encrypted) => {
+            if(err) {
+                res.send(500);
+            }
+            const user = new User({
+                username: req.body.username,
+                password: encrypted 
+            });
+            user.save();
+            const token = generateAccessToken({id: user._id, username: user.username});
+            res.json(token)
+        })
+    });
+
+
 app.route('/login')
     .post((req, res) => {
-        User.findOne({ username: req.body.username, password: req.body.password }, (err, user) => {
+        User.findOne({ username: req.body.username }, (err, user) => {
             if (user) {
-                const token = generateAccessToken({ user });
-                res.json({
-                    id: user._id,
-                    token
+                bcrypt.compare(req.body.password, user.password, (err, same) => {
+                    const token = generateAccessToken({id: user._id, username: user.username});
+                    res.json(token)
                 })
             } else {
                 res.sendStatus(404);
@@ -73,25 +81,3 @@ app.route('/posts/:title')
         });
         post.save((err, post) => err ? res.sendStatus(500) : res.json(post));
     });
-
-function generateAccessToken(id) {
-    return jwt.sign(id, process.env.SECRET);
-}
-
-function authenticateToken(req, res, next) {
-    const authHeader = req.headers['authorization']
-    const token = authHeader && authHeader.split(' ')[1]
-
-    if (token == null) return res.sendStatus(401)
-
-    jwt.verify(token, process.env.SECRET, (err, user) => {
-        if (err) {
-            console.log(err.message)
-            return res.sendStatus(403);
-        }
-
-        req.user = user;
-
-        next();
-    })
-}
